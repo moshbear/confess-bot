@@ -55,18 +55,22 @@ async def _delete_server(server_id: int) -> bool:
 # Discord interface
 
 
+async def _send_ephemeral_msg(ctx: discord.ApplicationContext, message: str):
+    await ctx.send_response(message, ephemeral=True)
+
+
 @bot.slash_command(name='confess')
 async def confess(ctx: discord.ApplicationContext, message: discord.Option(str)):
     target_id = await _get_channel_for_server(ctx.guild_id)
     target = ctx.guild.get_channel(target_id)
     if target is None:
-        await ctx.send_response(f'Could not find channel for id {target_id}')
+        await _send_ephemeral_msg(ctx, f'Could not find channel for id {target_id}')
         return
     try:
         await target.send(message)
-        await ctx.send_response('Sent')
+        await _send_ephemeral_msg(ctx, 'Sent')
     except discord.Forbidden:
-        await ctx.send_response(f'Permission error sending to "{target.name}"')
+        await _send_ephemeral_msg(ctx, f'Permission error sending to "{target.name}"')
 
 
 @bot.slash_command(name='csetchan')
@@ -74,7 +78,7 @@ async def confess(ctx: discord.ApplicationContext, message: discord.Option(str))
 async def set_channel(ctx: discord.ApplicationContext, channel: discord.Option(str)):
     if not (channel.startswith('<#') and channel.endswith('>')):
         _L.warning(f'Can\'t parse channel str "{channel}"')
-        await ctx.send_response('Couldn\'t set channel; see log')
+        await _send_ephemeral_msg(ctx, 'Couldn\'t set channel; see log')
         return
     try:
         channel_id = int(channel[2:-1])
@@ -84,9 +88,9 @@ async def set_channel(ctx: discord.ApplicationContext, channel: discord.Option(s
     # this would've been cleaner as an UPSERT
     if (await _set_channel_for_server(ctx.guild_id, channel_id)) \
             or (await _create_server(ctx.guild_id, channel_id)):
-        await ctx.send_response(f'Set channel to #{ctx.guild.get_channel(channel_id).name}')
+        await _send_ephemeral_msg(ctx, f'Set channel to #{ctx.guild.get_channel(channel_id).name}')
     else:
-        await ctx.send_response('DB failed to set channel')
+        await _send_ephemeral_msg(ctx, 'DB failed to set channel')
 
 
 @bot.event
